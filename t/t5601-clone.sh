@@ -312,6 +312,8 @@ setup_ssh_wrapper () {
 			"$TRASH_DIRECTORY/ssh-wrapper$X" &&
 		GIT_SSH="$TRASH_DIRECTORY/ssh-wrapper$X" &&
 		export GIT_SSH &&
+		GIT_SSH_VARIANT=ssh &&
+		export GIT_SSH_VARIANT &&
 		export TRASH_DIRECTORY &&
 		>"$TRASH_DIRECTORY"/ssh-output
 	'
@@ -320,7 +322,8 @@ setup_ssh_wrapper () {
 copy_ssh_wrapper_as () {
 	cp "$TRASH_DIRECTORY/ssh-wrapper$X" "${1%$X}$X" &&
 	GIT_SSH="${1%$X}$X" &&
-	export GIT_SSH
+	export GIT_SSH &&
+	unset GIT_SSH_VARIANT
 }
 
 expect_ssh () {
@@ -362,10 +365,10 @@ test_expect_success 'bracketed hostnames are still ssh' '
 	expect_ssh "-p 123" myhost src
 '
 
-test_expect_success 'uplink is not treated as putty' '
+test_expect_success 'uplink is treated as simple' '
 	copy_ssh_wrapper_as "$TRASH_DIRECTORY/uplink" &&
 	git clone "[myhost:123]:src" ssh-bracket-clone-uplink &&
-	expect_ssh "-p 123" myhost src
+	expect_ssh myhost src
 '
 
 test_expect_success 'plink is treated specially (as putty)' '
