@@ -1169,11 +1169,21 @@ const char *find_hook(const char *name)
 	strbuf_reset(&path);
 	strbuf_git_path(&path, "hooks/%s", name);
 	if (access(path.buf, X_OK) < 0) {
+		int err = errno;
 #ifdef STRIP_EXTENSION
 		strbuf_addstr(&path, STRIP_EXTENSION);
 		if (access(path.buf, X_OK) >= 0)
 			return path.buf;
+		else if (errno == EACCES)
+			err = errno;
 #endif
+		if (err == EACCES && advice_ignored_hook) {
+			advise(_(
+				"The '%s' hook was ignored because "
+				"it's not set as executable.\n"
+				"You can disable this warning with "
+				"`git config advice.ignoredHook false`."), path.buf);
+		}
 		return NULL;
 	}
 	return path.buf;
