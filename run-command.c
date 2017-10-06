@@ -5,6 +5,7 @@
 #include "argv-array.h"
 #include "thread-utils.h"
 #include "strbuf.h"
+#include "string-list.h"
 
 void child_process_init(struct child_process *child)
 {
@@ -1170,19 +1171,25 @@ const char *find_hook(const char *name)
 	strbuf_git_path(&path, "hooks/%s", name);
 	if (access(path.buf, X_OK) < 0) {
 		int err = errno;
+
 #ifdef STRIP_EXTENSION
 		strbuf_addstr(&path, STRIP_EXTENSION);
 		if (access(path.buf, X_OK) >= 0)
 			return path.buf;
-		else if (errno == EACCES)
+		if (errno == EACCES)
 			err = errno;
 #endif
 		if (err == EACCES && advice_ignored_hook) {
-			advise(_(
-				"The '%s' hook was ignored because "
-				"it's not set as executable.\n"
-				"You can disable this warning with "
-				"`git config advice.ignoredHook false`."), path.buf);
+			static struct string_list advise_given = STRING_LIST_INIT_DUP;
+
+			if (!string_list_lookup(&advise_given, name)) {
+				string_list_insert(&advise_given, name);
+				advise(_("The '%s' hook was ignored because "
+					 "it's not set as executable.\n"
+					 "You can disable this warning with "
+					 "`git config advice.ignoredHook false`."),
+				       path.buf);
+			}
 		}
 		return NULL;
 	}
